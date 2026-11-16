@@ -1,7 +1,7 @@
-"""Cambiar el color de fondo de una foto (ideal para foto de hoja de vida).
+"""Change the background color of a photo (ideal for a CV / resume photo).
 
-Usa IA (rembg) para separar a la persona del fondo y luego pone el color que elijas.
-Uso:  python app.py
+Uses AI (rembg) to separate the person from the background, then fills in the chosen color.
+Usage:  python app.py
 """
 import threading
 import tkinter as tk
@@ -10,8 +10,8 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 
 from PIL import Image, ImageFilter, ImageOps, ImageTk
 
-MODEL_NAME = "u2net_human_seg"  # modelo especializado en personas
-PREVIEW_MAX = 520               # tamaño máximo (px) de las vistas previas
+MODEL_NAME = "u2net_human_seg"  # model specialized in people
+PREVIEW_MAX = 520               # maximum size (px) of the previews
 
 PRESETS = {
     "Blanco": "#FFFFFF",
@@ -23,7 +23,7 @@ PRESETS = {
 }
 
 
-# ----------------------------------------------------------------- lógica ---
+# ------------------------------------------------------------------ logic ---
 def hex_to_rgb(color: str) -> tuple:
     color = color.lstrip("#")
     return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
@@ -31,11 +31,11 @@ def hex_to_rgb(color: str) -> tuple:
 
 def compose(photo: Image.Image, alpha: Image.Image, color: str,
             erode: float = 1, soften: float = 1, scale: float = 1.0) -> Image.Image:
-    """Pega la persona (photo + alpha) sobre un fondo de color sólido.
+    """Paste the person (photo + alpha) onto a solid color background.
 
-    erode  : píxeles que se "comen" del borde para quitar el halo del fondo viejo.
-    soften : desenfoque del borde para que se vea natural.
-    scale  : factor para que los radios se vean igual en la vista previa reducida.
+    erode  : pixels "eaten" from the edge to remove the halo of the old background.
+    soften : edge blur so the cutout looks natural.
+    scale  : factor so the radii look the same in the downscaled preview.
     """
     mask = alpha
     e = int(round(erode * scale))
@@ -62,10 +62,10 @@ class App(tk.Tk):
         self.title("Cambiar fondo de foto")
         self.minsize(980, 620)
 
-        self.session = None        # modelo de rembg (se carga la primera vez)
-        self.photo = None          # imagen original RGB (tamaño completo)
-        self.alpha = None          # máscara de la persona (tamaño completo)
-        self.photo_small = None    # versiones reducidas para la vista previa
+        self.session = None        # rembg model (loaded on first use)
+        self.photo = None          # original RGB image (full size)
+        self.alpha = None          # person mask (full size)
+        self.photo_small = None    # downscaled versions for the preview
         self.alpha_small = None
         self.path = None
         self.color = tk.StringVar(value=PRESETS["Azul claro"])
@@ -75,7 +75,7 @@ class App(tk.Tk):
 
         self._build_ui()
 
-    # ---- interfaz
+    # ---- interface
     def _build_ui(self):
         side = ttk.Frame(self, padding=12)
         side.pack(side="left", fill="y")
@@ -88,10 +88,10 @@ class App(tk.Tk):
         ttk.Label(side, text="2. Color de fondo").pack(anchor="w")
         grid = ttk.Frame(side)
         grid.pack(fill="x", pady=4)
-        for i, (name, hexa) in enumerate(PRESETS.items()):
-            tk.Button(grid, text=name, bg=hexa, relief="groove", width=14,
-                      fg="#000" if sum(hex_to_rgb(hexa)) > 380 else "#fff",
-                      command=lambda h=hexa: self.set_color(h)
+        for i, (name, hex_color) in enumerate(PRESETS.items()):
+            tk.Button(grid, text=name, bg=hex_color, relief="groove", width=14,
+                      fg="#000" if sum(hex_to_rgb(hex_color)) > 380 else "#fff",
+                      command=lambda h=hex_color: self.set_color(h)
                       ).grid(row=i // 2, column=i % 2, padx=2, pady=2)
         ttk.Button(side, text="Otro color…", command=self.pick_color).pack(fill="x", pady=4)
         self.swatch = tk.Label(side, textvariable=self.color, bg=self.color.get(), height=2)
@@ -125,16 +125,16 @@ class App(tk.Tk):
         self._tk_imgs[key] = ImageTk.PhotoImage(img)
         label.configure(image=self._tk_imgs[key])
 
-    # ---- acciones
-    def set_color(self, hexa):
-        self.color.set(hexa)
-        self.swatch.configure(bg=hexa)
+    # ---- actions
+    def set_color(self, hex_color):
+        self.color.set(hex_color)
+        self.swatch.configure(bg=hex_color)
         self.refresh()
 
     def pick_color(self):
-        _, hexa = colorchooser.askcolor(color=self.color.get(), title="Elige el color de fondo")
-        if hexa:
-            self.set_color(hexa.upper())
+        _, hex_color = colorchooser.askcolor(color=self.color.get(), title="Elige el color de fondo")
+        if hex_color:
+            self.set_color(hex_color.upper())
 
     def open_image(self):
         path = filedialog.askopenfilename(
@@ -174,7 +174,7 @@ class App(tk.Tk):
         messagebox.showerror("Error", f"No se pudo quitar el fondo:\n{exc}")
 
     def _on_done(self, img, alpha):
-        if img is not self.photo:   # el usuario abrió otra foto mientras tanto
+        if img is not self.photo:   # the user opened another photo in the meantime
             return
         self.alpha = alpha
         self.photo_small = shrink(img, PREVIEW_MAX)
